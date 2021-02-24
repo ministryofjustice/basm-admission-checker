@@ -132,11 +132,25 @@ class IncomingPrisonerService(private val basmService: BasmService,
         )
       }
 
+      var numNotRecordedInBasm = 0
+      var numNotAdmitted = 0
+      var numNotFoundInNomis = 0
+      var numNotFoundInDelius = 0
 
-      return Movements(prison.attributes.nomis_agency_id, movements + nonMatchedAdmissions)
+      val allMovements = movements + nonMatchedAdmissions
+      allMovements.forEach {
+        if (!it.foundInBasm) numNotRecordedInBasm++
+        if (!it.foundInDelius) numNotFoundInDelius++
+        if (!it.foundInNomis) numNotFoundInNomis++
+        if (!it.matchedAdmission) numNotAdmitted++
+      }
+
+      return Movements(prison.attributes.nomis_agency_id,
+        Stats(numNotRecordedInBasm, numNotAdmitted, numNotFoundInNomis, numNotFoundInDelius),
+        allMovements)
     }
 
-    return Movements("NIN", listOf())
+    return Movements("Not Found", Stats(), listOf())
 
   }
 
@@ -159,9 +173,17 @@ class IncomingPrisonerService(private val basmService: BasmService,
   }
 }
 
+data class Stats (
+  val numNotRecordedInBasm : Int = 0,
+  val numNotAdmitted : Int = 0,
+  val numNotFoundInNomis : Int = 0,
+  val numNotFoundInDelius : Int = 0
+)
+
 @JsonInclude(NON_NULL)
 data class Movements(
   val prisonId: String? = null,
+  val stats : Stats,
   val movements: List<PrisonMovement>
 )
 
