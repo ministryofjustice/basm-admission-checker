@@ -2,10 +2,15 @@ oauth:
   endpoint.url: http://localhost:8090/auth
 
 prison:
-  endpoint.url: http://localhost:8093
+  endpoint.url: http://localhost:8081
 
-community:
-  endpoint.url: http://localhost:8096
+prisoner:
+  search:
+    endpoint.url: http://localhost:8093
+
+offender:
+  search:
+    endpoint.url: http://localhost:8096
 
 basm:
   endpoint.url: http://localhost:8097

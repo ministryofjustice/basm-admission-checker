@@ -15,18 +15,19 @@ import org.springframework.web.reactive.function.client.WebClient
 @Configuration
 class WebClientConfiguration(
   @Value("\${basm.endpoint.url}") private val basmRootUri: String,
-  @Value("\${community.endpoint.url}") private val communityRootUri: String,
+  @Value("\${offender.search.endpoint.url}") private val offenderSearchRootUri: String,
   @Value("\${prison.endpoint.url}") private val prisonRootUri: String,
+  @Value("\${prisoner.search.endpoint.url}") private val prisonerSearchRootUri: String,
   @Value("\${oauth.endpoint.url}") private val oauthRootUri: String,
 ) {
 
   @Bean
-  fun probationApiWebClient(authorizedClientManager: OAuth2AuthorizedClientManager): WebClient {
+  fun prisonApiWebClient(authorizedClientManager: OAuth2AuthorizedClientManager): WebClient {
     val oauth2Client = ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager)
-    oauth2Client.setDefaultClientRegistrationId("probation-api")
+    oauth2Client.setDefaultClientRegistrationId("prison-api")
 
     return WebClient.builder()
-      .baseUrl(communityRootUri)
+      .baseUrl(prisonRootUri)
       .apply(oauth2Client.oauth2Configuration())
       .exchangeStrategies(
         ExchangeStrategies.builder()
@@ -40,12 +41,32 @@ class WebClientConfiguration(
   }
 
   @Bean
-  fun prisonApiWebClient(authorizedClientManager: OAuth2AuthorizedClientManager): WebClient {
+  fun offenderSearchApiWebClient(authorizedClientManager: OAuth2AuthorizedClientManager): WebClient {
     val oauth2Client = ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager)
-    oauth2Client.setDefaultClientRegistrationId("prison-api")
+    oauth2Client.setDefaultClientRegistrationId("offender-search-api")
 
     return WebClient.builder()
-      .baseUrl(prisonRootUri)
+      .baseUrl(offenderSearchRootUri)
+      .apply(oauth2Client.oauth2Configuration())
+      .exchangeStrategies(
+        ExchangeStrategies.builder()
+          .codecs { configurer ->
+            configurer.defaultCodecs()
+              .maxInMemorySize(-1)
+          }
+          .build()
+      )
+      .build()
+  }
+
+
+  @Bean
+  fun prisonerSearchApiWebClient(authorizedClientManager: OAuth2AuthorizedClientManager): WebClient {
+    val oauth2Client = ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager)
+    oauth2Client.setDefaultClientRegistrationId("prisoner-search-api")
+
+    return WebClient.builder()
+      .baseUrl(prisonerSearchRootUri)
       .apply(oauth2Client.oauth2Configuration())
       .exchangeStrategies(
         ExchangeStrategies.builder()
@@ -78,8 +99,8 @@ class WebClientConfiguration(
   }
 
   @Bean
-  fun probationApiHealthWebClient(): WebClient {
-    return WebClient.builder().baseUrl(communityRootUri).build()
+  fun offenderSearchApiHealthWebClient(): WebClient {
+    return WebClient.builder().baseUrl(offenderSearchRootUri).build()
   }
 
   @Bean
@@ -88,8 +109,8 @@ class WebClientConfiguration(
   }
 
   @Bean
-  fun prisonApiHealthWebClient(): WebClient {
-    return WebClient.builder().baseUrl(prisonRootUri).build()
+  fun prisonerSearchApiHealthWebClient(): WebClient {
+    return WebClient.builder().baseUrl(prisonerSearchRootUri).build()
   }
 
   @Bean
