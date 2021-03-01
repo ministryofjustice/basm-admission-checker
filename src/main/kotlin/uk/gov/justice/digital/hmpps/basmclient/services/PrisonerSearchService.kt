@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.basmclient.services
 
+import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL
 import org.springframework.beans.factory.annotation.Qualifier
@@ -16,13 +17,13 @@ import java.time.LocalDate
 class PrisonerSearchService(@Qualifier("prisonerSearchApiWebClient") private val webClient: WebClient) {
 
 
-  fun matchPrisoner(searchRequest: SearchRequest): List<PrisonerSearchResult>{
+  fun matchPrisoner(searchRequest: SearchRequest): PrisonerSearchResultContent{
     return webClient.post()
-      .uri("/global-search")
+      .uri("/match-prisoners")
       .bodyValue(searchRequest)
       .retrieve()
       .bodyToMono(PrisonerSearchResultContent::class.java)
-      .block()!!.content
+      .block()!!
   }
 
 
@@ -32,15 +33,23 @@ class PrisonerSearchService(@Qualifier("prisonerSearchApiWebClient") private val
 }
 
 data class SearchRequest (
-  val firstName: String?,
-  val lastName: String?,
-  val prisonerIdentifier : String?,
-  val dateOfBirth: LocalDate?
+  val firstName: String,
+  val lastName: String,
+  @JsonFormat(pattern = "yyyy-MM-dd")
+  val dateOfBirth: LocalDate,
+  val nomsNumber: String?,
+  val pncNumber: String? = null,
+  val croNumber: String? = null
 )
 
 data class PrisonerSearchResultContent (
-  val content : List<PrisonerSearchResult>
-  )
+val matches: List<PrisonerMatch>,
+val matchedBy: String
+)
+
+data class PrisonerMatch(
+  val prisoner: PrisonerSearchResult
+)
 
 @JsonInclude(NON_NULL)
 data class PrisonerSearchResult (

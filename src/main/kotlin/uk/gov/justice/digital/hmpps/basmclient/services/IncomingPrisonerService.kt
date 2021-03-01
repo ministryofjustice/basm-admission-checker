@@ -67,39 +67,30 @@ class IncomingPrisonerService(private val basmService: BasmService,
             )
 
             // look in Nomis for record
-            var matchedPrisoners : List<PrisonerSearchResult> = listOf()
-            if (police_national_computer != null) {
-              matchedPrisoners = matchPrisoners(first_names, last_name, police_national_computer, date_of_birth)
-            }
-            val probationMatchedOffenders = matchedOffenders.matches
-            if (matchedPrisoners.isEmpty() && probationMatchedOffenders.isNotEmpty() && probationMatchedOffenders[0].offender.otherIds.pncNumber != null) {
-              // try with Delius PNC
-              matchedPrisoners = matchPrisoners(first_names, last_name, probationMatchedOffenders[0].offender.otherIds.pncNumber, date_of_birth)
-            }
-            if (matchedPrisoners.isEmpty() && prison_number != null) {
-              // try with NOMS ID
-              matchedPrisoners = matchPrisoners(first_names, last_name, prison_number, date_of_birth)
-            }
-            if (matchedPrisoners.isEmpty() && criminal_records_office != null) {
-              matchedPrisoners = matchPrisoners(first_names, last_name, criminal_records_office, date_of_birth)
-            }
-            if (matchedPrisoners.isEmpty()) {
-              matchedPrisoners = matchPrisoners(first_names, last_name, null, null)
-            }
+            var matchedPrisoners = prisonerSearchService.matchPrisoner(
+              SearchRequest(
+                first_names,
+                last_name,
+                date_of_birth,
+                prison_number,
+                police_national_computer,
+                criminal_records_office
+              )
+            )
 
-            val matchedAdmission = findAdmissionMovement(matchedPrisoners, admittedPrisoners)
+            val matchedAdmission = findAdmissionMovement(matchedPrisoners.matches, admittedPrisoners)
             if (matchedAdmission != null) {
               nonMatched.remove(matchedAdmission.offenderNo)
             }
 
             PrisonMovement(
               true,
-              matchedPrisoners.isNotEmpty(),
-              probationMatchedOffenders.isNotEmpty(),
+              matchedPrisoners.matches.isNotEmpty(),
+              matchedOffenders.matches.isNotEmpty(),
               matchedAdmission != null,
               matchedPrisoners,
               basmRecord,
-              probationMatchedOffenders,
+              matchedOffenders,
               matchedAdmission
             )
           }
@@ -119,15 +110,24 @@ class IncomingPrisonerService(private val basmService: BasmService,
           )
         )
 
-        val prisonerMatch = matchPrisoners(null, null, it.key, null)
+        val prisonerMatch = prisonerSearchService.matchPrisoner(
+          SearchRequest(
+            it.value.firstName,
+            it.value.firstName,
+            it.value.dateOfBirth,
+            it.key,
+            null,
+            null
+          )
+        )
         PrisonMovement(
           false,
-          true,
+          prisonerMatch.matches.isNotEmpty(),
           offenderMatch.matches.isNotEmpty(),
           true,
           prisonerMatch,
           null,
-          offenderMatch.matches,
+          offenderMatch,
           it.value
         )
       }
@@ -146,7 +146,7 @@ class IncomingPrisonerService(private val basmService: BasmService,
       }
 
       return Movements(prison.attributes.nomis_agency_id,
-        Stats(numNotRecordedInBasm, numNotAdmitted, numNotFoundInNomis, numNotFoundInDelius),
+        Stats(allMovements.size, numNotRecordedInBasm, numNotAdmitted, numNotFoundInNomis, numNotFoundInDelius),
         allMovements)
     }
 
@@ -154,26 +154,20 @@ class IncomingPrisonerService(private val basmService: BasmService,
 
   }
 
-  private fun findAdmissionMovement(matchedPrisoners: List<PrisonerSearchResult>,
+  private fun findAdmissionMovement(matchedPrisoners: List<PrisonerMatch>,
     admittedPrisoners: Map<String, AdmissionMovement>
   ): AdmissionMovement? {
     var matchedAdmission: AdmissionMovement? = null
     if (matchedPrisoners.isNotEmpty()) {
-      matchedAdmission = admittedPrisoners.get(matchedPrisoners[0].prisonerNumber)
+      matchedAdmission = admittedPrisoners.get(matchedPrisoners[0].prisoner.prisonerNumber)
     }
     return matchedAdmission
   }
 
-  private fun matchPrisoners(firstNames : String?, lastName: String?, id : String?, dob :LocalDate?): List<PrisonerSearchResult> {
-    return prisonerSearchService.matchPrisoner(
-      SearchRequest(
-        firstNames, lastName, id, dob
-      )
-    )
-  }
 }
 
 data class Stats (
+  val totalRecords : Int = 0,
   val numNotRecordedInBasm : Int = 0,
   val numNotAdmitted : Int = 0,
   val numNotFoundInNomis : Int = 0,
@@ -195,9 +189,9 @@ data class PrisonMovement(
   val foundInDelius: Boolean,
   val matchedAdmission: Boolean,
 
-  val nomisRecords: List<PrisonerSearchResult>?,
+  val nomisRecords: PrisonerSearchResultContent,
   val basmRecord : BasmRecord?,
-  val deliusRecord: List<OffenderMatch>?,
+  val deliusRecord: OffenderMatches,
   val admissionMovement: AdmissionMovement?
 )
 
