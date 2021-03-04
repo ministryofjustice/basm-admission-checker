@@ -6,10 +6,12 @@ import org.springframework.stereotype.Service
 import java.time.LocalDate
 
 @Service
-class IncomingPrisonerService(private val basmService: BasmService,
-                              private val prisonerSearchService: PrisonerSearchService,
-                              private val offenderSearchService: OffenderSearchService,
-                              private val prisonService: PrisonService) {
+class IncomingPrisonerService(
+  private val basmService: BasmService,
+  private val prisonerSearchService: PrisonerSearchService,
+  private val offenderSearchService: OffenderSearchService,
+  private val prisonService: PrisonService
+) {
   fun getInwardMovementsToPrisonBetweenDates(prisonId: String, fromDate: LocalDate, toDate: LocalDate): Movements {
     // lookup prison
 
@@ -17,7 +19,7 @@ class IncomingPrisonerService(private val basmService: BasmService,
 
     if (prison != null) {
       val admittedPrisoners = prisonService.admittedPrisoners(prisonId, fromDate, toDate)
-        .map{ it.offenderNo to it }.toMap()
+        .map { it.offenderNo to it }.toMap()
 
       val movementData = basmService.getMovements(prison.id, fromDate, toDate)
       val includes = movementData.included.groupBy { it.type }.mapValues { (_, v) -> v.associateBy { it.id } }
@@ -136,6 +138,7 @@ class IncomingPrisonerService(private val basmService: BasmService,
       var numNotAdmitted = 0
       var numNotFoundInNomis = 0
       var numNotFoundInDelius = 0
+      var moveTypes: MutableMap<String, Int> = mutableMapOf()
 
       val allMovements = movements + nonMatchedAdmissions
       allMovements.forEach {
@@ -143,18 +146,35 @@ class IncomingPrisonerService(private val basmService: BasmService,
         if (!it.foundInDelius) numNotFoundInDelius++
         if (!it.foundInNomis) numNotFoundInNomis++
         if (!it.matchedAdmission) numNotAdmitted++
+        if (it.basmRecord != null) {
+          val moveType = moveTypes.get(it.basmRecord.moveType)
+          if (moveType != null) {
+            moveTypes.put(it.basmRecord.moveType, moveType.inc())
+          } else {
+            moveTypes.put(it.basmRecord.moveType, 1)
+          }
+        }
       }
 
-      return Movements(prison.attributes.nomis_agency_id,
-        Stats(allMovements.size, numNotRecordedInBasm, numNotAdmitted, numNotFoundInNomis, numNotFoundInDelius),
-        allMovements)
+      return Movements(
+        prison.attributes.nomis_agency_id,
+        Stats(
+          allMovements.size,
+          numNotRecordedInBasm,
+          numNotAdmitted,
+          numNotFoundInNomis,
+          numNotFoundInDelius,
+          moveTypes
+        ),
+        allMovements
+      )
     }
 
     return Movements("Not Found", Stats(), listOf())
-
   }
 
-  private fun findAdmissionMovement(matchedPrisoners: List<PrisonerMatch>,
+  private fun findAdmissionMovement(
+    matchedPrisoners: List<PrisonerMatch>,
     admittedPrisoners: Map<String, AdmissionMovement>
   ): AdmissionMovement? {
     var matchedAdmission: AdmissionMovement? = null
@@ -166,38 +186,39 @@ class IncomingPrisonerService(private val basmService: BasmService,
 
 }
 
-data class Stats (
-  val totalRecords : Int = 0,
-  val numNotRecordedInBasm : Int = 0,
-  val numNotAdmitted : Int = 0,
-  val numNotFoundInNomis : Int = 0,
-  val numNotFoundInDelius : Int = 0
+data class Stats(
+  val totalRecords: Int = 0,
+  val numNotRecordedInBasm: Int = 0,
+  val numNotAdmitted: Int = 0,
+  val numNotFoundInNomis: Int = 0,
+  val numNotFoundInDelius: Int = 0,
+  val moveTypes: Map<String, Int> = mapOf()
 )
 
 @JsonInclude(NON_NULL)
 data class Movements(
   val prisonId: String? = null,
-  val stats : Stats,
+  val stats: Stats,
   val movements: List<PrisonMovement>
 )
 
 @JsonInclude(NON_NULL)
 data class PrisonMovement(
 
-  val foundInBasm : Boolean,
-  val foundInNomis : Boolean,
+  val foundInBasm: Boolean,
+  val foundInNomis: Boolean,
   val foundInDelius: Boolean,
   val matchedAdmission: Boolean,
 
   val nomisRecords: PrisonerSearchResultContent,
-  val basmRecord : BasmRecord?,
+  val basmRecord: BasmRecord?,
   val deliusRecord: OffenderMatches,
   val admissionMovement: AdmissionMovement?
 )
 
 @JsonInclude(NON_NULL)
 
-data class BasmRecord (
+data class BasmRecord(
   val person: PeopleAttributes?,
   val fromLocation: String,
   val toLocation: String,
@@ -214,20 +235,20 @@ data class BasmRecord (
 )
 
 @JsonInclude(NON_NULL)
-data class PrisonerSearchRecord (
+data class PrisonerSearchRecord(
   val firstName: String?,
   val lastName: String?,
   val dateOfBirth: LocalDate?,
   val nomsId: String?,
-  val pnc : String?,
+  val pnc: String?,
   val cro: String?
 )
 
 @JsonInclude(NON_NULL)
-data class OffenderSearchRecord (
+data class OffenderSearchRecord(
   val firstName: String?,
   val lastName: String?,
   val dateOfBirth: LocalDate?,
   val crn: String?,
-  val pnc : String?,
+  val pnc: String?,
 )

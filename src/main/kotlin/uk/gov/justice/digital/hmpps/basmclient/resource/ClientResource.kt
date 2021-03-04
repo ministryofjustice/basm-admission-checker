@@ -43,7 +43,7 @@ class ClientResource(private val incomingPrisonerService: IncomingPrisonerServic
   )
   fun getMovementsFromPrisonId(
     @Schema(description = "Prison ID", example = "PVI", required = true)
-    @PathVariable @Size(max = 3, min = 3, message = "Prison ID must b e 3 characters") prisonId: String,
+    @PathVariable @Size(max = 3, min = 3, message = "Prison ID must be 3 characters") prisonId: String,
     @RequestParam("dateFrom", required = false) @DateTimeFormat(iso = DATE) dateFrom : LocalDate?,
     @RequestParam("dateTo", required = false) @DateTimeFormat(iso = DATE) dateTo : LocalDate?
   ): Movements {
