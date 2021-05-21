@@ -234,21 +234,3 @@ data class BasmRecord(
   val updatedAt: String?
 )
 
-@JsonInclude(NON_NULL)
-data class PrisonerSearchRecord(
-  val firstName: String?,
-  val lastName: String?,
-  val dateOfBirth: LocalDate?,
-  val nomsId: String?,
-  val pnc: String?,
-  val cro: String?
-)
-
-@JsonInclude(NON_NULL)
-data class OffenderSearchRecord(
-  val firstName: String?,
-  val lastName: String?,
-  val dateOfBirth: LocalDate?,
-  val crn: String?,
-  val pnc: String?,
-)

@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 @Service
 class PrisonService(@Qualifier("prisonApiWebClient") private val webClient: WebClient) {
@@ -33,6 +34,15 @@ class PrisonService(@Qualifier("prisonApiWebClient") private val webClient: WebC
       .block()!!
   }
 
+  fun inwardPrisoners(prisonId: String, inwardDate : LocalDate): List<AdmissionMovement>{
+
+    val isoDate = inwardDate.format(DateTimeFormatter.ISO_DATE)
+    return webClient.get()
+      .uri("/api/movements/$prisonId/in/$isoDate")
+      .retrieve()
+      .bodyToMono(movementType)
+      .block()!!
+  }
 
   fun <T> emptyWhenNotFound(exception: WebClientResponseException): Mono<T> = emptyWhen(exception, NOT_FOUND)
   fun <T> emptyWhen(exception: WebClientResponseException, statusCode: HttpStatus): Mono<T> =
@@ -44,6 +54,7 @@ data class AdmissionMovement (
   val bookingId: Int,
   val dateOfBirth: LocalDate,
   val firstName: String,
+  val middleName: String?,
   val lastName: String,
   val fromAgencyId: String?,
   val fromAgencyDescription: String?,
@@ -51,5 +62,8 @@ data class AdmissionMovement (
   val toAgencyDescription: String,
   val movementTime: LocalTime,
   val movementDateTime : LocalDateTime,
-  val location: String?
+  val location: String?,
+  val fromCity: String?,
+  val toCity: String?
+
   )
