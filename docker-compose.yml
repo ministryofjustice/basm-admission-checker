@@ -1,0 +1,23 @@
+version: "3"
+services:
+  basm-client:
+    build: .
+    container_name: basm-client
+    ports:
+      - "8081:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ping"]
+    environment:
+      - oauth.endpoint.url=https://sign-in.hmpps.service.justice.gov.uk/auth
+      - PRISONER_SEARCH_ENDPOINT_URL=https://prisoner-offender-search.prison.service.justice.gov.uk
+      - BASM_ENDPOINT_URL=https://api.bookasecuremove.service.justice.gov.uk
+      - prison.endpoint.url=https://api.prison.service.justice.gov.uk
+      - offender.search.endpoint.url=https://probation-offender-search.hmpps.service.justice.gov.uk
+      - basm.client.client-id=
+      - basm.client.client-secret=
+      - hmpps-auth.client.client-id=
+      - hmpps-auth.client.client-secret=
+      - SPRING_PROFILES_ACTIVE=dev
+
+networks:
+  hmpps:

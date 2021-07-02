@@ -1,0 +1,35 @@
+FROM openjdk:11-slim AS builder
+
+ARG BUILD_NUMBER
+ENV BUILD_NUMBER ${BUILD_NUMBER:-1_0_0}
+
+WORKDIR /app
+ADD . .
+RUN ./gradlew assemble -Dorg.gradle.daemon=false
+
+
+FROM openjdk:11-slim
+LABEL maintainer="HMPPS Digital Studio <info@digital.justice.gov.uk>"
+
+ARG BUILD_NUMBER
+ENV BUILD_NUMBER ${BUILD_NUMBER:-1_0_0}
+
+RUN apt-get update && \
+    apt-get install -y curl && \
+    rm -rf /var/lib/apt/lists/*
+
+ARG BUILD_NUMBER
+ENV BUILD_NUMBER ${BUILD_NUMBER:-1_0_0}
+ENV TZ=Europe/London
+RUN ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime && echo "$TZ" > /etc/timezone
+
+RUN addgroup --gid 2000 --system appgroup && \
+    adduser --uid 2000 --system appuser --gid 2000
+
+WORKDIR /app
+
+COPY --from=builder --chown=appuser:appgroup /app/build/libs/basm-client*.jar /app/app.jar
+
+USER 2000
+
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
